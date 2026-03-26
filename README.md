@@ -1,49 +1,22 @@
 # Microservices Demo
 
-A demo application with Java, Go, Javascript, Kafka and PostgresQL.
+A demo application with Java, Go, Javascript, Kafka and PostgresQL replicating this repository: https://github.com/okteto-community/microservices-demo
 
-## Architecture
+But using [Kubernetes Gateway API](https://gateway-api.sigs.k8s.io/) `HTTPRoute` objects instead of traditional `Ingress` resources, deployed and developed with [Okteto](https://okteto.com).
 
-![Architecture diagram](architecture.png)
+## HTTPRoute and parentRefs
 
-* A front-end web app in [Java](/vote) which lets you vote between Tacos and Burritos
-* A [Kafka](https://bitnami.com/stack/kafka/helm) queue which collects new votes
-* A [Golang](/worker) or worker which consumes votes from Kafka and stores them in PostgresQL
-* A [PostgresQL](https://bitnami.com/stack/postgresql/helm) database
-* A [Node.js](/result) webapp which shows the results of the voting in real time
+The `HTTPRoute` object in in both services Result and Vote **omits the `parentRefs` field**.
 
-## Run the demo application in Okteto
+This is designed to run in an Okteto instance where the Helm setting `endpoints.dev.gatewayAPI.gateway.force` is set to `true`. When that setting is enabled, Okteto automatically injects the required `parentRef` pointing to the cluster's gateway, so you don't need to specify it manually.
 
-```
-$ git clone https://github.com/okteto/microservices-demo
-$ cd microservices-demo
-$ okteto login
-$ okteto deploy
-```
+If `endpoints.dev.gatewayAPI.gateway.force` is `false` (the default), you must add the `parentRefs` field explicitly to your `HTTPRoute`:
 
-## Develop on the Result microservice
-
-```
-$ okteto up result
+```yaml
+parentRefs:
+  - kind: Gateway
+    name: <GATEWAY_NAME>
+    namespace: <GATEWAY_NAMESPACE>
+    group: gateway.networking.k8s.io
 ```
 
-## Develop on the Vote microservice
-
-```
-$ okteto up vote
-```
-
-## Develop on the Worker microservice
-
-```
-$ okteto up worker
-$ make start
-```
-
-## Notes
-
-The voting application only accepts one vote per client. It does not register votes if a vote has already been submitted from a client.
-
-This isn't an example of a properly architected perfectly designed distributed app... it's just a simple
-example of the various types of pieces and languages you might see (queues, persistent data, etc), and how to
-deal with them in Okteto.
